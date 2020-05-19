@@ -53,9 +53,9 @@ if __name__ == '__main__':
     train_loader = ArchitectureClassificationDataset(os.path.join(PATH_DATA, 'train.csv'), BATCH_SIZE, train_transform)
     val_loader = ArchitectureClassificationDataset(os.path.join(PATH_DATA,'val.csv'), BATCH_SIZE, val_transform)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.0003, momentum=0.9)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     criterion = torch.nn.CrossEntropyLoss()
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.95, last_epoch=-1)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.9, last_epoch=-1)
 
     best_acc = 0
 
