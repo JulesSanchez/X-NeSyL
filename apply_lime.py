@@ -41,7 +41,8 @@ img_t = get_input_tensors(img)
 model = models.resnet101(pretrained=True,num_classes=1000)
 model.fc = torch.nn.Sequential(
     torch.nn.Linear(2048,512),
-    torch.nn.Linear(512,4)
+    torch.nn.Linear(512,256),
+    torch.nn.Linear(256,4)
 )
 model.load_state_dict(torch.load(MODEL_PATH))
 
@@ -87,7 +88,7 @@ explanation = explainer.explain_instance(np.array(pill_transf(img)),
                                          hide_color=0, 
                                          num_samples=1000) # number of images that will be sent to classification function
 
-temp, mask = explanation.get_image_and_mask(explanation.top_labels[2], positive_only=False, num_features=5, hide_rest=False)
+temp, mask = explanation.get_image_and_mask(explanation.top_labels[0], positive_only=False, num_features=5, hide_rest=False)
 img_boundry1 = mark_boundaries(temp/255, mask)
 plt.imshow(img_boundry1)
 plt.show()

@@ -20,6 +20,6 @@ SUB_ELEMENTS = {
 CSV_IMG = 'files_img.csv'
 CSV_XML = 'files_xml.csv'
 
-N_EPOCHS = 100
+N_EPOCHS = 40
 BATCH_SIZE = 8
 MODEL_PATH = './model/model_resnet101.pth'
