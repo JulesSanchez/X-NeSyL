@@ -43,9 +43,9 @@ if __name__ == '__main__':
     model = models.resnet101(pretrained=True,num_classes=1000)
     set_parameter_requires_grad(model, True)
     model.fc = torch.nn.Sequential(
-        torch.nn.Linear(2048,512),
+        torch.nn.Linear(2048,1024),
         torch.nn.ReLU(),
-        torch.nn.Linear(512,4)
+        torch.nn.Linear(1024,4)
     )
 
     model.cuda()
@@ -53,9 +53,9 @@ if __name__ == '__main__':
     train_loader = ArchitectureClassificationDataset(os.path.join(PATH_DATA, 'train.csv'), BATCH_SIZE, train_transform)
     val_loader = ArchitectureClassificationDataset(os.path.join(PATH_DATA,'val.csv'), BATCH_SIZE, val_transform)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.0005, momentum=0.9)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
     criterion = torch.nn.CrossEntropyLoss()
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 3, gamma=0.8, last_epoch=-1)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 2, gamma=0.7, last_epoch=-1)
 
     best_acc = 0
 

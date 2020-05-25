@@ -12,7 +12,6 @@ model.fc = torch.nn.Sequential(
     torch.nn.Linear(256,4)
 )
 model.load_state_dict(torch.load(MODEL_PATH))
-print(model)
 # build the xdeep explainer
 model_explainer = ImageInterpreter(model)
 
