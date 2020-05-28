@@ -1,10 +1,10 @@
-from config import *
 import os, torch
 import pandas as pd
 import torchvision.models as models
-from dataloader import ArchitectureClassificationDataset, train_transform, val_transform
 from sklearn.model_selection import train_test_split
-from train import train, validate
+from utils.config import *
+from utils.dataloader import ArchitectureClassificationDataset, train_transform, val_transform
+from utils.train import train, validate
 
 def build_csv():
     row_list_xml = []

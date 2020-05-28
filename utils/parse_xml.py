@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET 
 import numpy as np 
 import torch
+from PIL import Image
 
 def parseXML(path, name_to_label, c=0, is_pytorch=False):
     #Create a dictionnary from the XML file (given its path here) following naming patterns used by torchvision for detection
@@ -32,3 +33,19 @@ def parseXML(path, name_to_label, c=0, is_pytorch=False):
         info['iscrowd'] = torch.from_numpy(info['iscrowd']).type(torch.uint8)
 
     return name, folder, shape, info
+
+def apply_bb_from_XML(image_name, xml_df, name_to_label, element_label):
+    xml_path, label = xml_df.query('@image_name in path')
+    im_path = im_df.query('@image_name in path')['path']
+    _, _, _, info = parseXML(path, name_to_label)
+    im = np.asarray(Image.open(im_path))
+
+    for k in range(len(info['boxes'])):
+        if label in element_label[info['labels'][k]]
+            cv2.rectangle(im,info['boxes'][k][:2],info['boxes'][k][2:],(0,255,0),6)
+        else :
+            cv2.rectangle(im,info['boxes'][k][:2],info['boxes'][k][2:],(0,0,255),6)
+
+    return im
+
+
