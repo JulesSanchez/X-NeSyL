@@ -18,20 +18,20 @@ SUB_ELEMENTS = {
 }
 
 ELEMENTS_LABEL = {
-    'arco-herradura':['01.musulman'],
-    'dintel-adovelado':['03.renacentista','04.barroco'],
-    'arco-lobulado':['01.musulman'],
-    'arco-medio-punto': ['03.renacentista','04.barroco'],
-    'arco-apuntado':['02.gotico'],
-    'vano-adintelado':['01.musulman'],
-    'fronton': ['03.renacentista'], 
-    'arco-conopial':['02.gotico'],
-    'arco-trilobulado':['02.gotico'],
-    'serliana':['03.renacentista'],
-    'ojo-de-buey': ['03.renacentista','04.barroco'],
-    'fronton-curvo':'03.renacentista',
-    'fronton-partido':['04.barroco]',
-    'columna-salomonica':['04.barroco']
+    0:['01.musulman'],
+    1:['01.musulman'],
+    2:['01.musulman'],
+    3: ['03.renacentista','04.barroco'],
+    4:['02.gotico'],
+    5:['03.renacentista','04.barroco'],
+    6: ['03.renacentista'], 
+    7:['02.gotico'],
+    8:['02.gotico'],
+    9:['03.renacentista'],
+    10: ['03.renacentista','04.barroco'],
+    11:['03.renacentista'],
+    12:['04.barroco'],
+    13:['04.barroco']
 }
 
 CSV_IMG = 'files_img.csv'

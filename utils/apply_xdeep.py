@@ -1,6 +1,6 @@
 from xdeep.xlocal.gradient.explainers import *
 import torchvision.models as models
-from config import *
+from .config import *
 import torch 
 
 img_path = PATH_DATA+'/01.musulman/5b8ecf08e1e7f.jpg'

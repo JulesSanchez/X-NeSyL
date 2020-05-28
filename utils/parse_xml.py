@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 import numpy as np 
 import torch
 from PIL import Image
+import cv2 
 
 def parseXML(path, name_to_label, c=0, is_pytorch=False):
     #Create a dictionnary from the XML file (given its path here) following naming patterns used by torchvision for detection
@@ -34,18 +35,28 @@ def parseXML(path, name_to_label, c=0, is_pytorch=False):
 
     return name, folder, shape, info
 
-def apply_bb_from_XML(image_name, xml_df, name_to_label, element_label):
-    xml_path, label = xml_df.query('@image_name in path')
-    im_path = im_df.query('@image_name in path')['path']
-    _, _, _, info = parseXML(path, name_to_label)
+def apply_bb_from_XML(image_name, xml_df, im_df, name_to_label, element_label, heatmap = None):
+    xml_path, label = xml_df[xml_df['path'].str.contains(image_name)].values[0]
+    im_path, _ = im_df[im_df['path'].str.contains(image_name)].values[0]
+    _, _, _, info = parseXML(xml_path, name_to_label)
     im = np.asarray(Image.open(im_path))
+    if heatmap is not None:
+        from skimage.transform import resize 
+        try:
+            heatmap = resize(heatmap,im.shape[:2],clip=False,preserve_range=True)
+        except:
+            heatmap = resize(heatmap,im.shape,clip=False,preserve_range=True)
 
     for k in range(len(info['boxes'])):
-        if label in element_label[info['labels'][k]]
-            cv2.rectangle(im,info['boxes'][k][:2],info['boxes'][k][2:],(0,255,0),6)
+        if label in element_label[info['labels'][k]]:
+            if heatmap is not None:
+                cv2.rectangle(heatmap,(info['boxes'][k][0],info['boxes'][k][1]),(info['boxes'][k][2],info['boxes'][k][3]),(0,255,0),6)
+            cv2.rectangle(im,(info['boxes'][k][0],info['boxes'][k][1]),(info['boxes'][k][2],info['boxes'][k][3]),(0,255,0),6)
         else :
-            cv2.rectangle(im,info['boxes'][k][:2],info['boxes'][k][2:],(0,0,255),6)
+            if heatmap is not None:
+                cv2.rectangle(heatmap,(info['boxes'][k][0],info['boxes'][k][1]),(info['boxes'][k][2],info['boxes'][k][3]),(0,0,255),6)
+            cv2.rectangle(im,(info['boxes'][k][0],info['boxes'][k][1]),(info['boxes'][k][2],info['boxes'][k][3]),(0,0,255),6)
 
-    return im
+    return im, heatmap
 
 

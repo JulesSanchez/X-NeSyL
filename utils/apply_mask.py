@@ -4,9 +4,9 @@ from torchvision import models
 import cv2
 import sys
 import numpy as np
-from config import *
+from .config import *
 
-use_cuda = torch.cuda.is_available()
+use_cuda = False
 FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 Tensor = FloatTensor
