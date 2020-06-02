@@ -9,7 +9,7 @@ def parseXML(path, name_to_label, c=0, is_pytorch=False):
     #If is_pytorch is on, will load in tensors the values
     root = ET.parse(path).getroot()
     info = {}
-    shape = (int(root.find('size/height').text),int(root.find('size/width').text),int(root.find('size/depth').text))
+    shape = (int(root.find('size/height').text),int(root.find('size/width').text),3)
     folder = root.find('folder') .text
     name = root.find('filename').text
     info['boxes'] = []
@@ -17,8 +17,10 @@ def parseXML(path, name_to_label, c=0, is_pytorch=False):
     info['area'] = []
     info['image_id'] = np.array([c])
     for type_tag in root.findall('object'):
-        info['labels'].append(name_to_label[type_tag.find('name').text])
         local_box = [int(type_tag.find('bndbox/xmin').text),int(type_tag.find('bndbox/ymin').text),int(type_tag.find('bndbox/xmax').text),int(type_tag.find('bndbox/ymax').text)]
+        if local_box[3] > shape[0] or local_box[2] > shape[1]:
+            continue
+        info['labels'].append(name_to_label[type_tag.find('name').text])
         info['boxes'].append(local_box)
         info['area'].append((local_box[2]-local_box[0])*(local_box[3]-local_box[1]))
     info['boxes'] = np.array(info['boxes'])

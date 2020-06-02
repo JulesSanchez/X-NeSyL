@@ -1,37 +1,37 @@
 PATH_DATA = '../Data/Dataset-IGRB1092_14cls'
 FOLDERS_DATA = ['01.musulman','02.gotico','03.renacentista','04.barroco']
 SUB_ELEMENTS = {
-    'arco-herradura':0,
-    'dintel-adovelado':1,
-    'arco-lobulado':2,
-    'arco-medio-punto':3,
-    'arco-apuntado':4,
-    'vano-adintelado':5,
-    'fronton':6,
-    'arco-conopial':7,
-    'arco-trilobulado':8,
-    'serliana':9,
-    'ojo-de-buey':10,
-    'fronton-curvo':11,
-    'fronton-partido':12,
-    'columna-salomonica':13
+    'arco-herradura':1,
+    'dintel-adovelado':2,
+    'arco-lobulado':3,
+    'arco-medio-punto':4,
+    'arco-apuntado':5,
+    'vano-adintelado':6,
+    'fronton':7,
+    'arco-conopial':8,
+    'arco-trilobulado':9,
+    'serliana':10,
+    'ojo-de-buey':11,
+    'fronton-curvo':12,
+    'fronton-partido':13,
+    'columna-salomonica':14
 }
 
 ELEMENTS_LABEL = {
-    0:['01.musulman'],
     1:['01.musulman'],
     2:['01.musulman'],
-    3: ['03.renacentista','04.barroco'],
-    4:['02.gotico'],
-    5:['03.renacentista','04.barroco'],
-    6: ['03.renacentista'], 
-    7:['02.gotico'],
+    3:['01.musulman'],
+    4: ['03.renacentista','04.barroco'],
+    5:['02.gotico'],
+    6:['03.renacentista','04.barroco'],
+    7: ['03.renacentista'], 
     8:['02.gotico'],
-    9:['03.renacentista'],
-    10: ['03.renacentista','04.barroco'],
-    11:['03.renacentista'],
-    12:['04.barroco'],
-    13:['04.barroco']
+    9:['02.gotico'],
+    10:['03.renacentista'],
+    11: ['03.renacentista','04.barroco'],
+    12:['03.renacentista'],
+    13:['04.barroco'],
+    14:['04.barroco']
 }
 
 CSV_IMG = 'files_img.csv'
