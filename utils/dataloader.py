@@ -70,15 +70,17 @@ transform_detection =  Compose(
     p=1
                                 )
 
+transform_detection_eval =  T.Compose([T.Resize(256), T.CenterCrop(224)])
+
 def compute_area(list_boxes):
     return np.array([(box[2] - box[0])*(box[3]-box[1]) for box in list_boxes])
 
 class ArchitectureDetectionDataset(object):
-    def __init__(self, csv_img, csv_xml, transform=None):
+    def __init__(self, csv_img, csv_xml, transform=None, batch_size=1):
         self.images_loc = pd.read_csv(csv_img)
         self.xml_loc = pd.read_csv(csv_xml)
         self.transform = transform
-
+        self.batch_size = batch_size
 
     def __getitem__(self, idx):
 

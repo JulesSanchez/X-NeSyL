@@ -48,7 +48,6 @@ def apply_bb_from_XML(image_name, xml_df, im_df, name_to_label, element_label, h
             heatmap = resize(heatmap,im.shape[:2],clip=False,preserve_range=True)
         except:
             heatmap = resize(heatmap,im.shape,clip=False,preserve_range=True)
-
     for k in range(len(info['boxes'])):
         if label in element_label[info['labels'][k]]:
             if heatmap is not None:

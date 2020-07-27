@@ -17,6 +17,23 @@ SUB_ELEMENTS = {
     'columna-salomonica':14
 }
 
+SUB_ELEMENTS_REVERSED = {
+    1:'arco-herradura',
+    2:'dintel-adovelado',
+    3:'arco-lobulado',
+    4:'arco-medio-punto',
+    5:'arco-apuntado',
+    6:'vano-adintelado',
+    7:'fronton',
+    8:'arco-conopial',
+    9:'arco-trilobulado',
+    10:'serliana',
+    11:'ojo-de-buey',
+    12:'fronton-curvo',
+    13:'fronton-partido',
+    14:'columna-salomonica'
+}
+
 ELEMENTS_LABEL = {
     1:['01.musulman'],
     2:['01.musulman'],
@@ -37,6 +54,8 @@ ELEMENTS_LABEL = {
 CSV_IMG = 'files_img.csv'
 CSV_XML = 'files_xml.csv'
 
-N_EPOCHS = 25
+N_EPOCHS = 16
 BATCH_SIZE = 8
 MODEL_PATH = './model/model_resnet101.pth'
+DETECTOR_PATH = './model/model_fasterRCNN.pth'
+JSON_PATH = '../Results/json_detection'

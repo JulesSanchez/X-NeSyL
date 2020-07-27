@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import numpy as np
 import pandas as pd
-import os, json
+import os, json, cv2
 
 import torch
 from torchvision import models, transforms
@@ -14,11 +14,12 @@ from utils.dataloader import val_transform
 from utils.config import *
 from utils.parse_xml import apply_bb_from_XML
 
+cm = plt.get_cmap('jet')
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--interpreter", default="ScoreCAM")
-parser.add_argument("--image", default="04.barroco/catedral_jaen2.jpg")
+parser.add_argument("--interpreter", default="GradCAM")
+parser.add_argument("--image", default="02.gotico/casa_inquisicion_alhama.jpg")
 
 args = parser.parse_args()
 
@@ -84,7 +85,8 @@ elif args.interpreter == 'LIME':
                                          top_labels=4, 
                                          hide_color=0, 
                                          num_samples=1000) # number of images that will be sent to classification function
-	temp, mask = explanation.get_image_and_mask(explanation.top_labels[0], positive_only=False, num_features=5, hide_rest=False)
+	print(explanation.top_labels)
+	temp, mask = explanation.get_image_and_mask(explanation.top_labels[0], positive_only=False, num_features=7, hide_rest=False)
 	explanation = mark_boundaries(temp/255.0, mask)
 
 elif args.interpreter == 'Mask':
@@ -145,10 +147,13 @@ elif args.interpreter == 'Mask':
 
 	explanation = upsample(mask).detach().numpy()[0,0]
 
+plt.clf()
 
 xml_df = pd.read_csv(os.path.join(PATH_DATA,CSV_XML))
 im_df = pd.read_csv(os.path.join(PATH_DATA,CSV_IMG))
 printed_explanation, printed_heatmap = apply_bb_from_XML(im_name, xml_df, im_df, SUB_ELEMENTS, ELEMENTS_LABEL, heatmap = explanation)
-
+if "CAM" in args.interpreter:
+	printed_heatmap = (cm(printed_heatmap)[:,:,:3]*255).astype(np.uint8)
+	printed_heatmap = cv2.addWeighted(printed_heatmap, 0.4, printed_explanation, 0.7, 0)
 plt.imshow(printed_heatmap)
-plt.show()
+plt.savefig(im_name + '_' + args.interpreter + '.jpg')
