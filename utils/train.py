@@ -1,5 +1,7 @@
 import torch 
-import time 
+import time, json, os
+from .config import *
+import numpy as np 
 
 def train(model, dataloaders, criterion, optimizer):
     since = time.time()
@@ -66,3 +68,54 @@ def validate(model, dataloaders, criterion, best_acc, path):
 
     # load best model weights
     return best_acc
+
+def compute_json_detection(detector, loader, path):
+    #Run inference on all data to prepare for classification
+    detector.eval()
+    information_about_class = ['M', 'G', 'R', 'B']
+    for k in range(len(loader)):
+
+        img = loader[k][0][0].cuda()
+        results = detector([img])[0]
+        r_b = results['boxes'].detach().cpu().numpy()
+        scores = results['scores'].detach().cpu().numpy()
+        classes = results['labels'].detach().cpu().numpy()
+        unique, counts = np.unique(classes, return_counts=True)
+        counter = dict(zip(unique, counts))
+
+        img_name = loader.images_loc.iloc[k, 0]
+
+        condensced_results = {}
+        condensced_results["num_predictions"] = []
+        condensced_results["image"] = img_name
+        condensced_results["object"] = []
+        condensced_results["true_label"] = int(loader.images_loc.iloc[k, 1])
+
+        for name in SUB_ELEMENTS:
+
+            if SUB_ELEMENTS[name] in counter:
+                condensced_results["num_predictions"].append({
+                    name :  int(counter[SUB_ELEMENTS[name]])
+                })
+            else:
+                condensced_results["num_predictions"].append({
+                    name :  0
+                })
+            
+        for k in range(len(r_b)):
+            box = r_b[k]/224.
+            local_result = {
+                "bndbox" : {
+                    "xmin": str(box[0]),
+                    "ymin": str(box[1]),
+                    "ymax": str(box[3]),
+                    "xmax": str(box[2])
+                },
+                "score" : str(scores[k]),
+                "class" : SUB_ELEMENTS_REVERSED[classes[k]]
+            }
+            condensced_results["object"].append(local_result)
+
+        local_path = os.path.join(path,information_about_class[condensced_results["true_label"]] + img_name.split('/')[-1][:-4] + '.json')
+        with open(local_path, 'w') as fp:
+            json.dump(condensced_results, fp)

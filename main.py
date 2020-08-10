@@ -62,6 +62,6 @@ if __name__ == '__main__':
     for i in range(N_EPOCHS):
         print('Epoch {}/{}'.format(i+1, N_EPOCHS))
         print('-' * 10)
-        train(model, train_loader, criterion, optimizer)
+        #train(model, train_loader, criterion, optimizer)
         best_acc = validate(model, val_loader, criterion, best_acc, MODEL_PATH)
         scheduler.step()

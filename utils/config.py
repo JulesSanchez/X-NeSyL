@@ -54,8 +54,9 @@ ELEMENTS_LABEL = {
 CSV_IMG = 'files_img.csv'
 CSV_XML = 'files_xml.csv'
 
-N_EPOCHS = 16
+N_EPOCHS = 1
 BATCH_SIZE = 8
 MODEL_PATH = './model/model_resnet101.pth'
-DETECTOR_PATH = './model/model_fasterRCNN.pth'
+DETECTOR_PATH = './model/model_fasterRCNN_shap.pth'
 JSON_PATH = '../Results/json_detection'
+TMP_PATH = './tmp'
