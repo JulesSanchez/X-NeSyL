@@ -26,11 +26,29 @@ def compare_shap_and_KG(shap_values, true_labels, threshold = 0):
     contrib[contrib>-threshold] = 0
     return contrib
 
-def reduce_shap(contrib):
+def get_bbox_weight(shap_values,is_exponential=False,h=1):
+    shap_array = np.dstack((shap_values[0],shap_values[1],shap_values[2],shap_values[3]))
+    contrib = np.ones((shap_array.shape[0],shap_array.shape[1]+1,shap_array.shape[2]))
+    for i in range(len(shap_array)):
+        FG = nx.Graph()
+        contrib[i,1:,:] = shap_array[i,:,:]*knowledge_graph
+    contrib[contrib>=0] = 1
+    if not is_exponential:
+        contrib[contrib<0] = -h*contrib[contrib<0] + 1
+    else:
+        contrib[contrib<0] = np.exp(-h*contrib[contrib<0])
+    contrib = torch.from_numpy(contrib)
+    contrib.requires_grad = False
+    return contrib.type(torch.cuda.FloatTensor)
+
+def reduce_shap(contrib,is_exponential = False,h=1):
     shap_coeff = np.zeros(len(contrib))
-    shap_coeff = -np.min(contrib,axis=1) + 1
+    if not is_exponential:
+        shap_coeff = -h*np.min(contrib,axis=1) + 1
+    else :
+        shap_coeff = np.exp(-h*np.min(contrib,axis=1))
     shap_coeff = torch.from_numpy(shap_coeff)
-    shap_coeff.requires_grad = True
+    shap_coeff.requires_grad = False
     return shap_coeff.type(torch.cuda.FloatTensor)
 
 
@@ -98,12 +116,10 @@ def GED_metric(shap_values,threshold=0.01):
     KG, index_dic, reversed_index_dic = make_KG(False)
     d_tot = 0
     shap_array = np.dstack((shap_values[0],shap_values[1],shap_values[2],shap_values[3]))
-    print(shap_array.shape)
     for i in range(len(shap_array)):
         FG = nx.Graph()
         for k in range(shap_array.shape[-1]):
             facade = np.copy(shap_array[i,:,k])
-            print(facade)
             facade[facade<threshold] = 0
             facade[facade>=threshold] = 1
             facade = facade.astype(np.uint8)
