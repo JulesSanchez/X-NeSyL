@@ -4,21 +4,37 @@ import torch, sys
 import networkx as nx 
 
 sys.path.append("../MonuMAI-AutomaticStyleClassification")
-from monumai.monument import Monument
+from monumai.monument import Monument as MonMonumenAI
+from monumai.pascal import Monument as MonPascal
 
+
+#MonumenAI
 styles = FOLDERS_DATA
-archi_features = [el for sublist in list(Monument.ELEMENT_DIC.values()) for el in sublist]
-
-knowledge_graph = np.ones( (len(archi_features),len(styles)) ) * -1
-
-for i in range(len(Monument.ELEMENT_DIC)):
+archi_features = [el for sublist in list(MonMonumenAI.ELEMENT_DIC.values()) for el in sublist]
+knowledge_graph_monumenai = np.ones( (len(archi_features),len(styles)) ) * -1
+for i in range(len(MonMonumenAI.ELEMENT_DIC)):
     local_el = archi_features[i]
-    for k in range(len(list(Monument.TRUE_ELEMENT_DIC.keys()))):
-        style = list(Monument.TRUE_ELEMENT_DIC.keys())[k]
-        if local_el in Monument.TRUE_ELEMENT_DIC[style]:
-            knowledge_graph[i,k] = 1
+    for k in range(len(list(MonMonumenAI.TRUE_ELEMENT_DIC.keys()))):
+        style = list(MonMonumenAI.TRUE_ELEMENT_DIC.keys())[k]
+        if local_el in MonMonumenAI.TRUE_ELEMENT_DIC[style]:
+            knowledge_graph_monumenai[i,k] = 1
+#PascalPart
+###TODO
+styles = list(PASCAL_EL_DIC.keys())
+archi_features = [el for sublist in list(MonPascal.ELEMENT_DIC.values()) for el in sublist]
+knowledge_graph_pascal = np.ones( (len(archi_features),len(styles)) ) * -1
+for i in range(len(MonPascal.ELEMENT_DIC)):
+    local_el = archi_features[i]
+    for k in range(len(list(MonPascal.TRUE_ELEMENT_DIC.keys()))):
+        style = list(MonPascal.TRUE_ELEMENT_DIC.keys())[k]
+        if local_el in MonPascal.TRUE_ELEMENT_DIC[style]:
+            knowledge_graph_pascal[i,k] = 1
 
-def compare_shap_and_KG(shap_values, true_labels, threshold = 0):
+def compare_shap_and_KG(shap_values, true_labels, threshold = 0,dataset='MonumenAI'):
+    if dataset == 'MonumenAI':
+        knowledge_graph = knowledge_graph_monumenai
+    if dataset == 'PascalPart':
+        knowledge_graph = knowledge_graph_pascal
     contrib = np.zeros((len(true_labels),len(archi_features)))
     for k in range(len(true_labels)):
         local_kg = knowledge_graph[:,true_labels[k]]
@@ -26,7 +42,11 @@ def compare_shap_and_KG(shap_values, true_labels, threshold = 0):
     contrib[contrib>-threshold] = 0
     return contrib
 
-def get_bbox_weight(shap_values,is_exponential=False,h=1):
+def get_bbox_weight(shap_values,is_exponential=False,h=1,dataset='MonumenAI'):
+    if dataset == 'MonumenAI':
+        knowledge_graph = knowledge_graph_monumenai
+    if dataset == 'PascalPart':
+        knowledge_graph = knowledge_graph_pascal
     shap_array = np.dstack((shap_values[0],shap_values[1],shap_values[2],shap_values[3]))
     contrib = np.ones((shap_array.shape[0],shap_array.shape[1]+1,shap_array.shape[2]))
     for i in range(len(shap_array)):
@@ -70,12 +90,23 @@ def distance(filtered_graph, facade_graph):
                 d += 1
     return d
 
-names = [el for sublist in list(Monument.ELEMENT_DIC.values()) for el in sublist]
-element_dic = Monument.TRUE_ELEMENT_DIC
-styles = Monument.STYLES_HOTONE_ENCODE
+names_monumenai = [el for sublist in list(MonMonumenAI.ELEMENT_DIC.values()) for el in sublist]
+element_dic_monumenai = MonMonumenAI.TRUE_ELEMENT_DIC
+styles_monumenai = MonMonumenAI.STYLES_HOTONE_ENCODE
+###TODO
+names_pascal = [el for sublist in list(MonPascal.ELEMENT_DIC.values()) for el in sublist]
+element_dic_pascal = MonPascal.TRUE_ELEMENT_DIC
+styles_pascal = MonPascal.STYLES_HOTONE_ENCODE
 
-def make_KG(for_causal=False):
-    
+def make_KG(for_causal=False,dataset='MonumenAI'):
+    if dataset == 'MonumenAI':
+        names = names_monumenai
+        element_dic = element_dic_monumenai
+        styles = styles_monumenai
+    if dataset == 'PascalPart':
+        names = names_pascal
+        element_dic = element_dic_pascal
+        styles = styles_pascal
     index_dic = {}
     reversed_index_dic = {}
     index = 0
@@ -112,8 +143,16 @@ def make_KG(for_causal=False):
     
     return KG, index_dic, reversed_index_dic
     
-def GED_metric(shap_values,threshold=0.01):
-    KG, index_dic, reversed_index_dic = make_KG(False)
+def GED_metric(shap_values,threshold=0.01,dataset='MonumenAI'):
+    if dataset == 'MonumenAI':
+        names = names_monumenai
+        element_dic = element_dic_monumenai
+        styles = styles_monumenai
+    if dataset == 'PascalPart':
+        names = names_pascal
+        element_dic = element_dic_pascal
+        styles = styles_pascal
+    KG, index_dic, reversed_index_dic = make_KG(False,dataset=dataset)
     d_tot = 0
     shap_array = np.dstack((shap_values[0],shap_values[1],shap_values[2],shap_values[3]))
     for i in range(len(shap_array)):

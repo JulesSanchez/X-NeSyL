@@ -1,9 +1,9 @@
-import torch
+import torch, os
 from torchvision import datasets, transforms as T
 from torch.utils.data import Dataset
 from PIL import Image 
 import pandas as pd
-from .parse_xml import parseXML
+from .parse_xml import parseXML, parseXML_pascal
 from .config import *
 
 normalize = T.Normalize(mean=[0.485, 0.456, 0.406],
@@ -69,6 +69,18 @@ transform_detection =  Compose(
     bbox_params={'format':'pascal_voc', 'label_fields':['labels']}, 
     p=1
                                 )
+                            
+
+transform_detection_pascal =  Compose(
+    [
+        Resize(224,224),
+        Normalize(mean=[0.485, 0.456, 0.406],
+                  std=[0.229, 0.224, 0.225]),
+        ToTensor()
+    ],
+    bbox_params={'format':'pascal_voc', 'label_fields':['labels']}, 
+    p=1
+                                )
 
 transform_detection_eval =  T.Compose([T.Resize(256), T.CenterCrop(224)])
 
@@ -99,6 +111,43 @@ class ArchitectureDetectionDataset(object):
         target['labels'] = torch.from_numpy(target['labels']).type(torch.int64)
         target['image_id'] = torch.from_numpy(target['image_id']).type(torch.int64)
         target['iscrowd'] = torch.from_numpy(target['iscrowd']).type(torch.uint8)
+
+        return [img], [target]
+
+    def __len__(self):
+        return len(self.images_loc)
+
+
+class PascalDetectionDataset(object):
+    def __init__(self, relevant_xml, img_folder, xml_folder, transform=None, batch_size=1):
+        rel_xml = open(relevant_xml, 'r')
+        list_xml = [line.split('\n')[0] for line in rel_xml.readlines()]
+        self.images_loc = [os.path.join(img_folder,path[:-4]+'.jpg') for path in list_xml]
+        self.xml_loc = [os.path.join(xml_folder,path) for path in list_xml]
+        self.transform = transform
+        self.batch_size = batch_size
+
+    def __getitem__(self, idx):
+        img_name = self.images_loc[idx]
+        image = np.asarray(Image.open(img_name).convert('RGB'))
+        im_name = img_name.split('/')[-1][:-4]
+        xml_name = self.xml_loc[idx]
+        name, folder, shape, target = parseXML_pascal(xml_name, PASCAL_PART_DIC, idx, False)
+        image = resize(image,shape,clip=False,preserve_range=True)
+        #print(target['boxes'])
+        #print(image.shape)
+        if self.transform:
+            augmented = self.transform(image=image, bboxes=target['boxes'], labels=target['labels'])
+            img, target['boxes'] = augmented['image'], np.array(augmented['bboxes'])
+            target['area'] = compute_area(target['boxes'])
+        #print(target['boxes'])
+        target['boxes'] = torch.from_numpy(target['boxes']).type(torch.FloatTensor)
+        target['area'] = torch.from_numpy(target['area']).type(torch.FloatTensor)
+        target['labels'] = torch.from_numpy(target['labels']).type(torch.int64)
+        target['image_id'] = torch.from_numpy(target['image_id']).type(torch.int64)
+        target['iscrowd'] = torch.from_numpy(target['iscrowd']).type(torch.uint8)
+        #print(target['boxes'])
+        #print('----------------')
 
         return [img], [target]
 

@@ -23,12 +23,6 @@ import utils.utils as uti
 #Path to MonuMAI-AutomaticStyleClassification folder
 sys.path.append("../MonuMAI-AutomaticStyleClassification")
 from tools.pickle_tools import *
-from tools.metadata_tools import *
-from monumai.monument import Monument
-
-
-archi_features = [el for sublist in list(Monument.ELEMENT_DIC.values()) for el in sublist]
-styles = FOLDERS_DATA
 
 TMP_TRAIN = TMP_PATH + '/train'
 TMP_VAL = TMP_PATH + '/val'
@@ -39,7 +33,7 @@ os.makedirs(TMP_TRAIN, exist_ok=True)
 ##Argparse
 parser = argparse.ArgumentParser(description='Arguments needed to prepare the metadata files')
 parser.add_argument('--resume', dest='resume', help='Whether or not to resume a training', default=False)
-parser.add_argument('--path_resume', dest='path_resume', help='Path to the model to load', default='./model/model_fasterRCNN_instance_shap_exponential.pth')
+parser.add_argument('--path_resume', dest='path_resume', help='Path to the model to load', default='./model/model_pascal_fasterRCNN_instance_shap_exponential.pth')
 
 parser.add_argument('--epoch_classif', dest='epoch_classif', help='Number of epochs to train the classification model', default=150)
 parser.add_argument('--batch_size', dest='batch_size', help='Batch size to train the classification model', default=64)
@@ -51,15 +45,10 @@ parser.add_argument('--lr', dest='lr', help='Learning rate of the detection mode
 parser.add_argument('--stepLR', dest='stepLR', help='Step of the learning rate scheduler', default=3)
 parser.add_argument('--gammaLR', dest='gammaLR', help='Gamma parameter of the learning rate scheduler', default=0.5)
 
-parser.add_argument('--weight', dest='weight', help='Type of weighting', default='instance_level')
+parser.add_argument('--weight', dest='weight', help='Type of weighting', default='None')
 parser.add_argument('--exp_weights', dest='exp_weights', help='linear or exponential weighting', default='exponential')
-
+parser.add_argument('--data', dest='data', help='MonumenAI or PascalPart', default='PascalPart')
 args = parser.parse_args()
-
-##Hyperparameters & Dataloaders
-num_archi_features = len(archi_features)
-num_classes_detection = 15  # num_archi_features + background
-num_styles = len(styles)
 #Hyperparameters classification
 n_neurons_classification = int(args.neuron_classif)
 num_epochs_classification = int(args.epoch_classif)
@@ -70,13 +59,37 @@ num_epochs_detection = int(args.epoch_detection)
 learning_rate_detection = float(args.lr)
 stepLR = float(args.stepLR)
 gammaLR = float(args.gammaLR)
-#Loaders for detection
-train_loader = ArchitectureDetectionDataset(os.path.join(PATH_DATA, 'train.csv'), os.path.join(PATH_DATA, CSV_XML), transform_detection)
-if num_epochs_detection != 0:
-    val_loader = ArchitectureDetectionDataset(os.path.join(PATH_DATA,'val.csv'), os.path.join(PATH_DATA, CSV_XML), transform_detection)
-else:
-    #Actually loading the test set
-    val_loader = ArchitectureDetectionDataset(os.path.join(PATH_DATA,'test.csv'), os.path.join(PATH_DATA, CSV_XML), transform_detection)
+data = args.data
+if data == 'MonumenAI':
+    from tools.metadata_tools import *
+    from monumai.monument import Monument
+    archi_features = [el for sublist in list(Monument.ELEMENT_DIC.values()) for el in sublist]
+    styles = FOLDERS_DATA
+    #Loaders for detection
+    train_loader = ArchitectureDetectionDataset(os.path.join(PATH_DATA, 'train.csv'), os.path.join(PATH_DATA, CSV_XML), transform_detection)
+    if num_epochs_detection != 0:
+        val_loader = ArchitectureDetectionDataset(os.path.join(PATH_DATA,'val.csv'), os.path.join(PATH_DATA, CSV_XML), transform_detection)
+    else:
+        #Actually loading the test set
+        val_loader = ArchitectureDetectionDataset(os.path.join(PATH_DATA,'test.csv'), os.path.join(PATH_DATA, CSV_XML), transform_detection)
+if data == 'PascalPart':
+    from tools.metadata_tools_pascal import *
+    from monumai.pascal import Monument
+    archi_features = [el for sublist in list(Monument.ELEMENT_DIC.values()) for el in sublist]
+    styles = list(PASCAL_EL_DIC.keys())
+    #Loaders for detection
+    train_loader = PascalDetectionDataset(train_pascal, PATH_PASCAL+PASCAL_IMG,PATH_PASCAL+PASCAL_XML, transform_detection_pascal)
+    if num_epochs_detection != 0:
+        val_loader = PascalDetectionDataset(val_pascal, PATH_PASCAL+PASCAL_IMG,PATH_PASCAL+PASCAL_XML, transform_detection_pascal)
+    else:
+        #Actually loading the test set
+        val_loader = PascalDetectionDataset(test_pascal, PATH_PASCAL+PASCAL_IMG,PATH_PASCAL+PASCAL_XML, transform_detection_pascal)
+
+##Hyperparameters & Dataloaders
+num_archi_features = len(archi_features)
+num_classes_detection = num_archi_features + 1  # num_archi_features + background
+num_styles = len(styles)
+
 
 ##Build detection model
 if args.weight == "bbox_level":
@@ -114,8 +127,8 @@ for j in range(num_epochs_detection+1):
     if j > 0 or args.resume:
         detector.eval()
         #Run inference on all data to prepare for classification
-        compute_json_detection(detector, train_loader, TMP_TRAIN)
-        compute_json_detection(detector, val_loader, TMP_VAL)
+        compute_json_detection(detector, train_loader, TMP_TRAIN,dataset=data)
+        compute_json_detection(detector, val_loader, TMP_VAL,dataset=data)
 
         print('Inference run')
 
@@ -124,13 +137,18 @@ for j in range(num_epochs_detection+1):
         names = matrix_metadata[:,-1]
         train_data = np.zeros((len(names),num_archi_features))
         train_label = np.zeros(len(names))
-        for i in range(len(names)):
-            im_name = names[i][1:-5]
-            idx = train_loader.images_loc['path'].str.contains(im_name)
-            train_data[idx] = matrix_metadata[i,:num_archi_features]
-            train_label[idx] = matrix_metadata[i,num_archi_features]
-
-
+        if data == "MonumenAI":
+            for i in range(len(names)):
+                im_name = names[i][1:-5]
+                idx = train_loader.images_loc['path'].str.contains(im_name)
+                train_data[idx] = matrix_metadata[i,:num_archi_features]
+                train_label[idx] = matrix_metadata[i,num_archi_features]
+        if data == "PascalPart":
+            for i in range(len(names)):
+                im_name = os.path.join(PATH_PASCAL+PASCAL_IMG,names[i].split('_')[1][:-5] + '.jpg')
+                idx = train_loader.images_loc.index(im_name)
+                train_data[idx] = matrix_metadata[i,:num_archi_features]
+                train_label[idx] = matrix_metadata[i,num_archi_features]
         train_data = train_data.astype(np.float32)
         train_label = to_categorical(train_label.astype(np.float32).astype(np.int8))
 
@@ -138,12 +156,18 @@ for j in range(num_epochs_detection+1):
         names = matrix_metadata[:,-1]
         test_data = np.zeros((len(names),num_archi_features))
         test_label = np.zeros(len(names))
-        for i in range(len(names)):
-            im_name = names[i][1:-5]
-            idx = val_loader.images_loc['path'].str.contains(im_name)
-            test_data[idx] = matrix_metadata[i,:num_archi_features]
-            test_label[idx] = matrix_metadata[i,num_archi_features]
-
+        if data == "MonumenAI":
+            for i in range(len(names)):
+                im_name = names[i][1:-5]
+                idx = val_loader.images_loc['path'].str.contains(im_name)
+                test_data[idx] = matrix_metadata[i,:num_archi_features]
+                test_label[idx] = matrix_metadata[i,num_archi_features]
+        if data == "PascalPart":
+            for i in range(len(names)):
+                im_name = os.path.join(PATH_PASCAL+PASCAL_IMG,names[i].split('_')[1][:-5] + '.jpg')
+                idx = val_loader.images_loc.index(im_name)
+                test_data[idx] = matrix_metadata[i,:num_archi_features]
+                test_label[idx] = matrix_metadata[i,num_archi_features]
 
         test_data = test_data.astype(np.float32)
         test_label = to_categorical(test_label.astype(np.float32).astype(np.int8))
@@ -164,7 +188,7 @@ for j in range(num_epochs_detection+1):
         explainer = shap.KernelExplainer(classificator.predict, train_data[elements])
         shap_values_test = explainer.shap_values(test_data, nsamples=30, l1_reg='bic')
         #Compute GED based on shap metrics ?
-        d = GED_metric(shap_values_test)
+        d = GED_metric(shap_values_test, dataset=data)
         print('SHAP GED: ', d)
         if j < num_epochs_detection:
             #Compute relevant shap values
@@ -172,10 +196,10 @@ for j in range(num_epochs_detection+1):
             labels = np.argmax(train_label,axis=1)
             #labels = np.argmax(classificator(train_data).numpy(),axis=1)
             if args.weight == "instance_level":
-                contributions_shap = compare_shap_and_KG(shap_values_train, labels)
+                contributions_shap = compare_shap_and_KG(shap_values_train, labels, dataset=data)
                 shap_coeff = reduce_shap(contributions_shap,is_exponential)
             elif args.weight == "bbox_level":
-                shap_weights = get_bbox_weight(shap_values_train,is_exponential)
+                shap_weights = get_bbox_weight(shap_values_train,is_exponential, dataset=data)
             print("Shap computed")
 
 

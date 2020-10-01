@@ -74,7 +74,7 @@ def readXML_pascal(path, name_to_label, c=0, is_pytorch=False):
     info['image_id'] = np.array([c])
     info['parents'] = []
     for type_tag in root.findall('object'):
-        info['parents'].append(type_tag.find('parts/ispartsof'))
+        info['parents'].append(type_tag.find('parts/ispartof'))
         for pt in type_tag.findall('polygon'):
             xs = pt.findall('pt/x')
             ys = pt.findall('pt/y')
@@ -106,14 +106,14 @@ def parseXML_pascal(path, name_to_label, c=0, is_pytorch=False):
     info['area'] = []
     info['image_id'] = np.array([c])
     for type_tag in root.findall('object'):
-        if type_tag.find('parts/hasparts') is None:
+        if type_tag.find('parts/hasparts') is None or type_tag.find('parts/hasparts').text is None:
             for pt in type_tag.findall('polygon'):
                 xs = pt.findall('pt/x')
                 ys = pt.findall('pt/y')
             xs = [int(x.text) for x in xs]
             ys = [int(y.text) for y in ys]
             local_box = [min(xs),min(ys),max(xs),max(ys)]
-            if local_box[3] > shape[0] or local_box[2] > shape[1]:
+            if local_box[3] > shape[0] or local_box[2] > shape[1] or local_box[2]<=local_box[0] or local_box[3]<=local_box[1]:
                 continue
             info['labels'].append(name_to_label[type_tag.find('name').text])
             info['boxes'].append(local_box)
@@ -132,19 +132,61 @@ def parseXML_pascal(path, name_to_label, c=0, is_pytorch=False):
 
     return name, folder, shape, info
 
-def getAllLabels(path):
+def getAllLabels(path,parts=False):
     all_names = set()
     for subpath in os.listdir(path):
         root = ET.parse(os.path.join(path,subpath)).getroot()
         for type_tag in root.findall('object'):
-            all_names.add(type_tag.find('name').text)
+            if parts :
+                if type_tag.find('parts/hasparts') is None:
+                    all_names.add(type_tag.find('name').text)
+            if not parts :
+                if not type_tag.find('parts/hasparts') is None:
+                    all_names.add(type_tag.find('name').text)
     return all_names
 
-#readXML_pascal('/home/jules/Documents/Stage 4A/Data/pascalPartDataset/AnnotationsPascalPart/000002.xml',{})
-sets = getAllLabels('/home/jules/Documents/Stage 4A/Data/pascalPartDataset/AnnotationsPascalPart')
-element_dic = {}
-i = 0
-for el in sets:
-    element_dic[el] = i
-    i += 1
-print(element_dic)
+def setSingular(path):
+    all_names = []
+    for subpath in os.listdir(path):
+        root = ET.parse(os.path.join(path,subpath)).getroot()
+        l = 0
+        for type_tag in root.findall('object'):
+            if not type_tag.find('parts/hasparts') is None:
+                l+= 1
+        if l == 1:
+            all_names.append(subpath)
+    return all_names
+
+def reconstruct_knowledge_base(path):
+    PASCAL_EL_DIC = {'Bird': 0, 'Aeroplane': 1, 'Cat': 2, 'Dog': 3, 'Sheep': 4, 'Train': 5, 'Bicycle': 6, 'Horse': 7, 'Bottle': 8, 'Person': 9, 'Car': 10, 'diningtable': 11, 'Pottedplant': 12, 'Motorbike': 13, 'Sofa': 14, 'Boat': 15, 'Cow': 16, 'Chair': 17, 'Bus': 18, 'Tvmonitor': 19}
+    PASCAL_PART_DIC = {'Arm': 0, 'Engine': 1, 'Coach': 2, 'Tail': 3, 'Pot': 4, 'Cap': 5, 'Ear': 6, 'Horn': 7, 'Ebrow': 8, 'Nose': 9, 'Torso': 10, 'Head': 11, 'Body': 12, 'Muzzle': 13, 'Beak': 14, 'Hand': 15, 'Hair': 16, 'Neck': 17, 'Foot': 18, 'Stern': 19, 'Artifact_Wing': 20, 'Locomotive': 21, 'License_plate': 22, 'Screen': 23, 'Mirror': 24, 'Saddle': 25, 'Hoof': 26, 'Door': 27, 'Leg': 28, 'Plant': 29, 'Mouth': 30, 'Animal_Wing': 31, 'Eye': 32, 'Chain_Wheel': 33, 'Bodywork': 34, 'Handlebar': 35, 'Headlight': 36, 'Wheel': 37, 'Window': 38}
+    reverse_dic = {}
+    out_dic = {}
+    for key in PASCAL_EL_DIC:
+        out_dic[key] = set()
+        reverse_dic[PASCAL_EL_DIC[key]] = key
+    for subpath in os.listdir(path):
+        root = ET.parse(os.path.join(path,subpath)).getroot()
+        children = {}
+        parents = {}    
+        for type_tag in root.findall('object'):
+            if not type_tag.find('parts/hasparts') is None:
+                parents[int(type_tag.find('id').text)] = type_tag.find('name').text
+            else :
+                children[int(type_tag.find('id').text)] = (type_tag.find('name').text,int(type_tag.find('parts/ispartof').text))
+        for k in children:
+            parent = parents[children[k][1]]
+            out_dic[parent].add(children[k][0])
+    for key in PASCAL_EL_DIC:
+        out_dic[key] = list(out_dic[key])
+    return out_dic
+
+def get_label(path, name_to_label):
+    root = ET.parse(path).getroot()                    
+    for type_tag in root.findall('object'):
+        if not type_tag.find('parts/hasparts') is None:
+            label_name = type_tag.find('name').text
+    return name_to_label[label_name]
+
+
+parseXML_pascal('/home/jules/Documents/Stage 4A/Data/pascalPartDataset/AnnotationsPascalPart/004084.xml', {'Arm': 0, 'Engine': 1, 'Coach': 2, 'Tail': 3, 'Pot': 4, 'Cap': 5, 'Ear': 6, 'Horn': 7, 'Ebrow': 8, 'Nose': 9, 'Torso': 10, 'Head': 11, 'Body': 12, 'Muzzle': 13, 'Beak': 14, 'Hand': 15, 'Hair': 16, 'Neck': 17, 'Foot': 18, 'Stern': 19, 'Artifact_Wing': 20, 'Locomotive': 21, 'License_plate': 22, 'Screen': 23, 'Mirror': 24, 'Saddle': 25, 'Hoof': 26, 'Door': 27, 'Leg': 28, 'Plant': 29, 'Mouth': 30, 'Animal_Wing': 31, 'Eye': 32, 'Chain_Wheel': 33, 'Bodywork': 34, 'Handlebar': 35, 'Headlight': 36, 'Wheel': 37, 'Window': 38, 'diningtable': 39, 'Sofa':40, 'Boat':41, 'Chair':42})
