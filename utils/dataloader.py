@@ -3,13 +3,45 @@ from torchvision import datasets, transforms as T
 from torch.utils.data import Dataset
 from PIL import Image 
 import pandas as pd
-from .parse_xml import parseXML, parseXML_pascal
+from .parse_xml import parseXML, parseXML_pascal, get_label
 from .config import *
 
 normalize = T.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 train_transform = T.Compose([T.Resize(256), T.CenterCrop(224), T.ToTensor(), normalize])
 val_transform = T.Compose([T.Resize(256), T.CenterCrop(224), T.ToTensor(), normalize])
+
+class PascalClassificationDataset(object):
+    def __init__(self, relevant_xml, img_folder, xml_folder, transform=None, batch_size=8):
+        rel_xml = open(relevant_xml, 'r')
+        list_xml = [line.split('\n')[0] for line in rel_xml.readlines()]
+        self.images_loc = [os.path.join(img_folder,path[:-4]+'.jpg') for path in list_xml]
+        self.xml_loc = [os.path.join(xml_folder,path) for path in list_xml]
+        self.transform = transform
+        self.batch_size = batch_size
+
+    def __len__(self):
+        return len(self.images_loc)//self.batch_size + (len(self.images_loc)%self.batch_size > 0)
+
+    def __getitem__(self, idx):
+
+        imgs = []
+        labels = []
+        
+        for k in range(self.batch_size*idx, min(self.batch_size*(idx+1), len(self.images_loc))):
+            img_name = self.images_loc[k]
+            image = Image.open(img_name).convert('RGB')
+            labels.append(get_label(self.xml_loc[k], PASCAL_EL_DIC))
+            
+            if self.transform:
+                imgs.append(self.transform(image))
+            else:
+                imgs.append(np.asarray(image))
+
+        return torch.stack(imgs), torch.LongTensor(labels)
+
+    def __len__(self):
+        return len(self.images_loc)
 
 class ArchitectureClassificationDataset(Dataset):
     """Face Landmarks dataset."""

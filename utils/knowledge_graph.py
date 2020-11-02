@@ -47,7 +47,9 @@ def get_bbox_weight(shap_values,is_exponential=False,h=1,dataset='MonumenAI'):
         knowledge_graph = knowledge_graph_monumenai
     if dataset == 'PascalPart':
         knowledge_graph = knowledge_graph_pascal
-    shap_array = np.dstack((shap_values[0],shap_values[1],shap_values[2],shap_values[3]))
+    shap_array = shap_values[0]
+    for k in range(1,len(shap_values)):
+        shap_array = np.dstack((shap_array,shap_values[k]))
     contrib = np.ones((shap_array.shape[0],shap_array.shape[1]+1,shap_array.shape[2]))
     for i in range(len(shap_array)):
         FG = nx.Graph()
@@ -143,7 +145,7 @@ def make_KG(for_causal=False,dataset='MonumenAI'):
     
     return KG, index_dic, reversed_index_dic
     
-def GED_metric(shap_values,threshold=0.01,dataset='MonumenAI'):
+def GED_metric(features,shap_values,threshold=0.001,dataset='MonumenAI'):
     if dataset == 'MonumenAI':
         names = names_monumenai
         element_dic = element_dic_monumenai
@@ -155,12 +157,25 @@ def GED_metric(shap_values,threshold=0.01,dataset='MonumenAI'):
     KG, index_dic, reversed_index_dic = make_KG(False,dataset=dataset)
     d_tot = 0
     shap_array = np.dstack((shap_values[0],shap_values[1],shap_values[2],shap_values[3]))
+    features[features < 1] = 0
     for i in range(len(shap_array)):
         FG = nx.Graph()
         for k in range(shap_array.shape[-1]):
-            facade = np.copy(shap_array[i,:,k])
+            facade = np.copy(shap_array[i,:,k])*features[k]
             facade[facade<threshold] = 0
             facade[facade>=threshold] = 1
+            facade = facade.astype(np.uint8)
+            style_index = reversed_index_dic[styles[k]]
+            if np.sum(facade) > 0:
+                FG.add_node(style_index, name=styles[k])
+                for j in range(len(facade)):
+                    if facade[j]:
+                        index = reversed_index_dic[names[j]]
+                        FG.add_node(index, name=names[j])
+                        FG.add_edge(style_index, index)
+            facade = np.copy(shap_array[i,:,k])*(features[k] == False)
+            facade[facade<threshold] = 1
+            facade[facade>=threshold] = 0
             facade = facade.astype(np.uint8)
             style_index = reversed_index_dic[styles[k]]
             if np.sum(facade) > 0:

@@ -11,7 +11,7 @@ def train(model, dataloaders, criterion, optimizer):
     running_loss = 0.0
     running_corrects = 0
     # Iterate over data.
-    for i in range(len(dataloaders)):
+    for i in range(len(dataloaders.images_loc)//dataloaders.batch_size + (len(dataloaders.images_loc)%dataloaders.batch_size > 0)):
         inputs, labels = dataloaders[i]
         inputs = inputs.cuda()
         labels = labels.cuda()
@@ -43,7 +43,7 @@ def validate(model, dataloaders, criterion, best_acc, path):
     running_loss = 0.0
     running_corrects = 0
     # Iterate over data.
-    for i in range(len(dataloaders)):
+    for i in range(len(dataloaders.images_loc)//dataloaders.batch_size + (len(dataloaders.images_loc)%dataloaders.batch_size > 0)):
         inputs, labels = dataloaders[i]
         inputs = inputs.cuda()
         labels = labels.cuda()

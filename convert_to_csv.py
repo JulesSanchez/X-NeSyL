@@ -30,6 +30,7 @@ for i in range(len(im_names)):
     for k in range(len(target['boxes'])):
         out_train.append([im_name,target['boxes'][k][0],target['boxes'][k][1],target['boxes'][k][2],target['boxes'][k][3],s_e_rev[target['labels'][k]]])
 
+print(len(out_train))
 
 s_e_rev = SUB_ELEMENTS_REVERSED
 im_names = pd.read_csv(val)
@@ -54,12 +55,12 @@ for i in range(len(im_names)):
 
 with open('train_retinanet.csv', 'w', newline='') as myfile:
      wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-     for row in out_val:
+     for row in out_train:
         wr.writerow(row)
 
 with open('val_retinanet.csv', 'w', newline='') as myfile:
      wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-     for row in out_train:
+     for row in out_val:
         wr.writerow(row)
 
 with open('test_retinanet.csv', 'w', newline='') as myfile:

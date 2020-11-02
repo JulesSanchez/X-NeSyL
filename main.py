@@ -1,9 +1,10 @@
 import os, torch
 import pandas as pd
 import torchvision.models as models
+import torch.nn as nn
 from sklearn.model_selection import train_test_split
 from utils.config import *
-from utils.dataloader import ArchitectureClassificationDataset, train_transform, val_transform
+from utils.dataloader import ArchitectureClassificationDataset, train_transform, val_transform, PascalClassificationDataset, transform_detection_pascal
 from utils.train import train, validate
 
 def build_csv():
@@ -36,34 +37,46 @@ def set_parameter_requires_grad(model, feature_extracting):
 
 if __name__ == '__main__':
 
-    if not os.path.exists(os.path.join(PATH_DATA,CSV_IMG)):
-        build_csv()
+    # if not os.path.exists(os.path.join(PATH_DATA,CSV_IMG)):
+    #     build_csv()
 
-    if not os.path.exists(os.path.join(PATH_DATA, 'test.csv')):
-        split_train_val_csv()
+    # if not os.path.exists(os.path.join(PATH_DATA, 'test.csv')):
+    #     split_train_val_csv()
 
-    # model = models.resnet101(pretrained=True,num_classes=1000)
-    # set_parameter_requires_grad(model, True)
-    # model.fc = torch.nn.Sequential(
-    #     torch.nn.Linear(2048,1024),
-    #     torch.nn.ReLU(),
-    #     torch.nn.Linear(1024,4)
-    # )
+    model = models.resnet101(pretrained=True,num_classes=1000)
+    for param in model.parameters():
+        param.requires_grad = False
+    model.fc = torch.nn.Sequential(
+                      nn.Linear(2048, 256), 
+                      nn.ReLU(), 
+                      nn.Dropout(0.4),
+                      nn.Linear(256, 20),                   
+                      nn.LogSoftmax(dim=1)
+    )
 
-    # model.cuda()
+    model.cuda()
 
+    train_loader = PascalClassificationDataset(train_pascal, PATH_PASCAL+PASCAL_IMG,PATH_PASCAL+PASCAL_XML, train_transform, 16)
+    val_loader = PascalClassificationDataset(val_pascal, PATH_PASCAL+PASCAL_IMG,PATH_PASCAL+PASCAL_XML, train_transform, 16)
+    test_loader = PascalClassificationDataset(test_pascal, PATH_PASCAL+PASCAL_IMG,PATH_PASCAL+PASCAL_XML, train_transform, 16)
+
+    print(len(train_loader))
+    print(len(train_loader.images_loc)//train_loader.batch_size + (len(train_loader.images_loc)%train_loader.batch_size > 0))
     # train_loader = ArchitectureClassificationDataset(os.path.join(PATH_DATA, 'train.csv'), BATCH_SIZE, train_transform)
     # val_loader = ArchitectureClassificationDataset(os.path.join(PATH_DATA,'val.csv'), BATCH_SIZE, val_transform)
+    # test_loader = ArchitectureClassificationDataset(os.path.join(PATH_DATA,'test.csv'), BATCH_SIZE, val_transform)
 
-    # optimizer = torch.optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
-    # criterion = torch.nn.CrossEntropyLoss()
-    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 2, gamma=0.7, last_epoch=-1)
+    optimizer = torch.optim.Adam(model.parameters())
+    criterion = nn.NLLLoss()
+    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 2, gamma=0.7, last_epoch=-1)
 
-    # best_acc = 0
+    best_acc = 0
 
-    # for i in range(N_EPOCHS):
-    #     print('Epoch {}/{}'.format(i+1, N_EPOCHS))
-    #     print('-' * 10)
-    #     #train(model, train_loader, criterion, optimizer)
-    #     best_acc = validate(model, val_loader, criterion, best_acc, MODEL_PATH)
-    #     scheduler.step()
+    for i in range(N_EPOCHS):
+        print('Epoch {}/{}'.format(i+1, N_EPOCHS))
+        print('-' * 10)
+        train(model, train_loader, criterion, optimizer)
+        best_acc = validate(model, val_loader, criterion, best_acc, MODEL_PATH)
+        #scheduler.step()
+    best_acc = validate(model, test_loader, criterion, 0, MODEL_PATH)
+    
