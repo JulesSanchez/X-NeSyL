@@ -6,6 +6,11 @@ import pandas as pd
 from .parse_xml import parseXML, parseXML_pascal, get_label
 from .config import *
 
+'''
+Classification loader are quite obsolete as they were used for non-part-based classification (such as resnet) and to train baseline
+'''
+
+
 normalize = T.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 train_transform = T.Compose([T.Resize(256), T.CenterCrop(224), T.ToTensor(), normalize])

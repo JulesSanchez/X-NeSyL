@@ -66,6 +66,7 @@ else:
 
 detector.load_state_dict(torch.load(args.path_resume))
 
+#Make loaders
 from albumentations import (
     Resize,
     Compose,
@@ -86,6 +87,7 @@ transform =  Compose(
 
 
 if args.path_image.endswith('.jpg'):
+    #Resize the image and save ratio for upsampling later
     image = np.asarray(Image.open(args.path_image).convert('RGB'))
     ratio_h = image.shape[0]/224
     ratio_w = image.shape[1]/224
@@ -98,6 +100,7 @@ if args.path_image.endswith('.jpg'):
     boxes = []
     labels = []
     scores = []
+    #Apply the boxes on the image
     for i in range(len(dic_results['boxes'])):
         xmin = (dic_results['boxes'][i][0].detach().numpy())*ratio_w
         ymin = (dic_results['boxes'][i][1].detach().numpy())*ratio_h
@@ -109,10 +112,12 @@ if args.path_image.endswith('.jpg'):
         cv2.rectangle(image,(int(xmin),int(ymin)),(int(xmax),int(ymax)),(0,0,255),4)
         cv2.putText(image,archi_features[labels[i]-1],(int(xmin),int(ymin)-4),cv2.FONT_HERSHEY_SIMPLEX,0.7,(0,0,255),2)
         cv2.putText(image,str(scores[i])[:5],(int(xmin),int(ymax)-4),cv2.FONT_HERSHEY_SIMPLEX,0.7,(0,0,255),2)
+    #save the result
     result = Image.fromarray((image).astype(np.uint8))
     result.save(args.path_save + '/' + args.path_image.split('/')[-1])
 
 else:
+    #If it's a folder, explore the whole folder and apply the same as before
     for path in os.listdir(args.path_image):
         if path.endswith('.jpg'):
             img_path = os.path.join(args.path_image,path)

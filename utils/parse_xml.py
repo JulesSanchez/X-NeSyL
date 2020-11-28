@@ -62,7 +62,6 @@ def apply_bb_from_XML(image_name, xml_df, im_df, name_to_label, element_label, h
 
 def readXML_pascal(path, name_to_label, c=0, is_pytorch=False):
     #Create a dictionnary from the XML file (given its path here) following naming patterns used by torchvision for detection
-    #If is_pytorch is on, will load in tensors the values
     root = ET.parse(path).getroot()
     info = {}
     shape = (int(root.find('imagesize/nrows').text),int(root.find('imagesize/ncols').text),3)
@@ -187,6 +186,3 @@ def get_label(path, name_to_label):
         if not type_tag.find('parts/hasparts') is None:
             label_name = type_tag.find('name').text
     return name_to_label[label_name]
-
-
-#parseXML_pascal('/home/jules/Documents/Stage 4A/Data/pascalPartDataset/AnnotationsPascalPart/004084.xml', {'Arm': 0, 'Engine': 1, 'Coach': 2, 'Tail': 3, 'Pot': 4, 'Cap': 5, 'Ear': 6, 'Horn': 7, 'Ebrow': 8, 'Nose': 9, 'Torso': 10, 'Head': 11, 'Body': 12, 'Muzzle': 13, 'Beak': 14, 'Hand': 15, 'Hair': 16, 'Neck': 17, 'Foot': 18, 'Stern': 19, 'Artifact_Wing': 20, 'Locomotive': 21, 'License_plate': 22, 'Screen': 23, 'Mirror': 24, 'Saddle': 25, 'Hoof': 26, 'Door': 27, 'Leg': 28, 'Plant': 29, 'Mouth': 30, 'Animal_Wing': 31, 'Eye': 32, 'Chain_Wheel': 33, 'Bodywork': 34, 'Handlebar': 35, 'Headlight': 36, 'Wheel': 37, 'Window': 38, 'diningtable': 39, 'Sofa':40, 'Boat':41, 'Chair':42})

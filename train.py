@@ -34,8 +34,9 @@ os.makedirs(TMP_TEST, exist_ok=True)
 
 ##Argparse
 parser = argparse.ArgumentParser(description='Arguments needed to prepare the metadata files')
-parser.add_argument('--resume', dest='resume', help='Whether or not to resume a training', default=True)
+parser.add_argument('--resume', dest='resume', help='Whether or not to resume a training', default=False)
 parser.add_argument('--path_resume', dest='path_resume', help='Path to the model to load', default='./model/model_pascal_fasterRCNN_bbox_lin.pth')
+#path_resume also corresponds to where the file wille be saved in case of resume=False. If None default to DETECTOR_PATH
 
 parser.add_argument('--epoch_classif', dest='epoch_classif', help='Number of epochs to train the classification model', default=150)
 parser.add_argument('--batch_size', dest='batch_size', help='Batch size to train the classification model', default=64)
@@ -48,20 +49,24 @@ parser.add_argument('--stepLR', dest='stepLR', help='Step of the learning rate s
 parser.add_argument('--gammaLR', dest='gammaLR', help='Gamma parameter of the learning rate scheduler', default=0.1)
 
 parser.add_argument('--weight', dest='weight', help='Type of weighting', default='None')
+#Type of weighting can be 'None", 'bbox_level', 'instance_level'
 parser.add_argument('--exp_weights', dest='exp_weights', help='linear or exponential weighting', default='linear')
 parser.add_argument('--data', dest='data', help='MonumenAI or PascalPart', default='PascalPart')
 args = parser.parse_args()
+
 #Hyperparameters classification
 n_neurons_classification = int(args.neuron_classif)
 num_epochs_classification = int(args.epoch_classif)
 batch_size_classification = int(args.batch_size)
 learning_rate_classification = None
+
 #Hyperparameters detection
 num_epochs_detection = int(args.epoch_detection)
 learning_rate_detection = float(args.lr)
 stepLR = float(args.stepLR)
 gammaLR = float(args.gammaLR)
 data = args.data
+
 if data == 'MonumenAI':
     from tools.metadata_tools import *
     from monumai.monument import Monument
@@ -89,7 +94,7 @@ if data == 'PascalPart':
         val_loader = PascalDetectionDataset(val_pascal, PATH_PASCAL+PASCAL_IMG,PATH_PASCAL+PASCAL_XML, transform_detection_pascal)
         test_loader = PascalDetectionDataset(test_pascal, PATH_PASCAL+PASCAL_IMG,PATH_PASCAL+PASCAL_XML, transform_detection_pascal)
 
-##Hyperparameters & Dataloaders
+##Hyperparameters for detection
 num_archi_features = len(archi_features)
 num_classes_detection = num_archi_features + 1  # num_archi_features + background
 num_styles = len(styles)
@@ -133,12 +138,13 @@ for j in range(num_epochs_detection+1):
         #Run inference on all data to prepare for classification
         compute_json_detection(detector, train_loader, TMP_TRAIN,dataset=data)
         compute_json_detection(detector, val_loader, TMP_VAL,dataset=data)
+        #If necessary run on test set aswell
         if num_epochs_detection == 0:
             compute_json_detection(detector, test_loader, TMP_TEST,dataset=data)
 
         print('Inference run')
 
-        #Featurization
+        #Application of the aggregation function first for train then for val
         matrix_metadata = metadata_to_matrix(TMP_TRAIN, "json")
         names = matrix_metadata[:,-1]
         train_data = np.zeros((len(names),num_archi_features))
@@ -186,9 +192,10 @@ for j in range(num_epochs_detection+1):
         #Train model
         history = classificator.fit(train_data, train_label, batch_size=batch_size_classification, epochs=num_epochs_classification, verbose=0)
         loss, accuracy = classificator.evaluate(test_data, test_label, verbose=1)
-        #Shap
+        #SHAP
         elements = np.random.choice(len(train_data), int(0.3*len(train_data)), False)
         explainer = shap.KernelExplainer(classificator.predict, train_data[elements])
+        #Apply aggregation function to test if necessary
         if num_epochs_detection==0:
             matrix_metadata = metadata_to_matrix(TMP_TEST, "json")
             names = matrix_metadata[:,-1]
@@ -211,14 +218,13 @@ for j in range(num_epochs_detection+1):
             non_cat = np.copy(test_label)
             test_label = to_categorical(test_label.astype(np.float32).astype(np.int8))
         shap_values_test = explainer.shap_values(test_data, nsamples=30, l1_reg='bic')
-        #Compute GED based on shap metrics ?
+        #Compute GED based on shap 
         d = GED_metric(test_data, shap_values_test, dataset=data)
         print('SHAP GED: ', d)
         if j < num_epochs_detection:
-            #Compute relevant shap values
+            #Compute relevant shap values & shap weights
             shap_values_train = explainer.shap_values(train_data, nsamples=30, l1_reg='bic')
             labels = np.argmax(train_label,axis=1)
-            #labels = np.argmax(classificator(train_data).numpy(),axis=1)
             if args.weight == "instance_level":
                 contributions_shap = compare_shap_and_KG(shap_values_train, labels, dataset=data)
                 shap_coeff = reduce_shap(contributions_shap,is_exponential)
@@ -237,7 +243,7 @@ for j in range(num_epochs_detection+1):
         for images, targets in metric_logger.log_every(train_loader, 250, header):
             images = list(image.to('cuda') for image in images)
             targets = [{k: v.to('cuda') for k, v in t.items()} for t in targets]
-            #SHAP can be added during this computation
+            #SHAP if necessary
             #-------
             if (j > 0 or args.resume) and args.weight == "bbox_level":
                 loss_dict = detector(images, targets, weights=shap_weights[index][:,labels[index]])
@@ -254,13 +260,13 @@ for j in range(num_epochs_detection+1):
             optimizer.step()
             metric_logger.update(loss=losses, **loss_dict)
             metric_logger.update(lr=optimizer.param_groups[0]["lr"])
-
-        #Evaluation
         scheduler.step()
+        #Saving model
         if args.path_resume is None:
             torch.save(detector.state_dict(), DETECTOR_PATH)
         else:
             torch.save(detector.state_dict(), args.path_resume)
+    #Evaluation
     if num_epochs_detection == 0:
         loss, accuracy = classificator.evaluate(test_data, test_label, verbose=1)
         predict_test = classificator(test_data)
@@ -276,7 +282,7 @@ for j in range(num_epochs_detection+1):
         disp.plot(include_values=True, cmap='viridis')
         plt.savefig('confmatDeLDECAS.png')
         shap_values_test = explainer.shap_values(test_data, nsamples=30, l1_reg='bic')
-        #Compute GED based on shap metrics ?
+        #Compute GED based on shap 
         d = GED_metric(test_data, shap_values_test, dataset=data)
         print(d)
         print(accuracy)

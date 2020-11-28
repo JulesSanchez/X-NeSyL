@@ -8,7 +8,7 @@ from monumai.monument import Monument as MonMonumenAI
 from monumai.pascal import Monument as MonPascal
 
 
-#MonumenAI
+#MonumenAI - Build the knowledge graph matrix
 styles = FOLDERS_DATA
 archi_features = [el for sublist in list(MonMonumenAI.ELEMENT_DIC.values()) for el in sublist]
 knowledge_graph_monumenai = np.ones( (len(archi_features),len(styles)) ) * -1
@@ -18,8 +18,7 @@ for i in range(len(MonMonumenAI.ELEMENT_DIC)):
         style = list(MonMonumenAI.TRUE_ELEMENT_DIC.keys())[k]
         if local_el in MonMonumenAI.TRUE_ELEMENT_DIC[style]:
             knowledge_graph_monumenai[i,k] = 1
-#PascalPart
-###TODO
+#PascalPart - Build the knowledge graph matrix
 styles = list(PASCAL_EL_DIC.keys())
 archi_features = [el for sublist in list(MonPascal.ELEMENT_DIC.values()) for el in sublist]
 knowledge_graph_pascal = np.ones( (len(archi_features),len(styles)) ) * -1
@@ -30,6 +29,7 @@ for i in range(len(MonPascal.ELEMENT_DIC)):
         if local_el in MonPascal.TRUE_ELEMENT_DIC[style]:
             knowledge_graph_pascal[i,k] = 1
 
+#Functions to compute instance level weights. Here compute misattribution
 def compare_shap_and_KG(shap_values, true_labels, threshold = 0,dataset='MonumenAI'):
     if dataset == 'MonumenAI':
         knowledge_graph = knowledge_graph_monumenai
@@ -41,7 +41,18 @@ def compare_shap_and_KG(shap_values, true_labels, threshold = 0,dataset='Monumen
         contrib[k] = shap_values[true_labels[k]][k]*local_kg
     contrib[contrib>-threshold] = 0
     return contrib
+#Here apply the max function
+def reduce_shap(contrib,is_exponential = False,h=1):
+    shap_coeff = np.zeros(len(contrib))
+    if not is_exponential:
+        shap_coeff = -h*np.min(contrib,axis=1) + 1
+    else :
+        shap_coeff = np.exp(-h*np.min(contrib,axis=1))
+    shap_coeff = torch.from_numpy(shap_coeff)
+    shap_coeff.requires_grad = False
+    return shap_coeff.type(torch.cuda.FloatTensor)
 
+#Function to compute bbox level weights
 def get_bbox_weight(shap_values,is_exponential=False,h=1,dataset='MonumenAI'):
     if dataset == 'MonumenAI':
         knowledge_graph = knowledge_graph_monumenai
@@ -63,25 +74,14 @@ def get_bbox_weight(shap_values,is_exponential=False,h=1,dataset='MonumenAI'):
     contrib.requires_grad = False
     return contrib.type(torch.cuda.FloatTensor)
 
-def reduce_shap(contrib,is_exponential = False,h=1):
-    shap_coeff = np.zeros(len(contrib))
-    if not is_exponential:
-        shap_coeff = -h*np.min(contrib,axis=1) + 1
-    else :
-        shap_coeff = np.exp(-h*np.min(contrib,axis=1))
-    shap_coeff = torch.from_numpy(shap_coeff)
-    shap_coeff.requires_grad = False
-    return shap_coeff.type(torch.cuda.FloatTensor)
-
-
+#Compute the projection of the KG given the SAG
 def filter_KG(knowledge_graph, facade_graph):
     nodes = facade_graph.nodes
     return knowledge_graph.subgraph(nodes)
-
+#Comparaison function (not used I think)
 def compare_node(n1,n2):
     return n1['name'] == n2['name']
-        
-
+#Simplification of the GED in our case
 def distance(filtered_graph, facade_graph):
     d = 0
     for edge in filtered_graph.edges:
@@ -92,14 +92,16 @@ def distance(filtered_graph, facade_graph):
                 d += 1
     return d
 
+#Define names and hyperparameters for the knowledge graph
 names_monumenai = [el for sublist in list(MonMonumenAI.ELEMENT_DIC.values()) for el in sublist]
 element_dic_monumenai = MonMonumenAI.TRUE_ELEMENT_DIC
 styles_monumenai = MonMonumenAI.STYLES_HOTONE_ENCODE
-###TODO
+
 names_pascal = [el for sublist in list(MonPascal.ELEMENT_DIC.values()) for el in sublist]
 element_dic_pascal = MonPascal.TRUE_ELEMENT_DIC
 styles_pascal = MonPascal.STYLES_HOTONE_ENCODE
 
+#Build KG - graph form
 def make_KG(for_causal=False,dataset='MonumenAI'):
     if dataset == 'MonumenAI':
         names = names_monumenai
@@ -144,7 +146,8 @@ def make_KG(for_causal=False,dataset='MonumenAI'):
     reversed_index_dic['contrib'] = index+1
     
     return KG, index_dic, reversed_index_dic
-    
+
+#Fully compute the GED, given feature vectors and shap values. Build KG, build SAG and compute GED
 def GED_metric(features,shap_values,threshold=0.001,dataset='MonumenAI'):
     if dataset == 'MonumenAI':
         names = names_monumenai
