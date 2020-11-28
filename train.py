@@ -35,7 +35,7 @@ os.makedirs(TMP_TEST, exist_ok=True)
 ##Argparse
 parser = argparse.ArgumentParser(description='Arguments needed to prepare the metadata files')
 parser.add_argument('--resume', dest='resume', help='Whether or not to resume a training', default=False)
-parser.add_argument('--path_resume', dest='path_resume', help='Path to the model to load', default='./model/model_pascal_fasterRCNN_bbox_lin.pth')
+parser.add_argument('--path_resume', dest='path_resume', help='Path to the model to load', default='./model/model_monumenai.pth')
 #path_resume also corresponds to where the file wille be saved in case of resume=False. If None default to DETECTOR_PATH
 
 parser.add_argument('--epoch_classif', dest='epoch_classif', help='Number of epochs to train the classification model', default=150)
@@ -51,7 +51,7 @@ parser.add_argument('--gammaLR', dest='gammaLR', help='Gamma parameter of the le
 parser.add_argument('--weight', dest='weight', help='Type of weighting', default='None')
 #Type of weighting can be 'None", 'bbox_level', 'instance_level'
 parser.add_argument('--exp_weights', dest='exp_weights', help='linear or exponential weighting', default='linear')
-parser.add_argument('--data', dest='data', help='MonumenAI or PascalPart', default='PascalPart')
+parser.add_argument('--data', dest='data', help='MonumenAI or PascalPart', default='MonumenAI')
 args = parser.parse_args()
 
 #Hyperparameters classification
