@@ -1,6 +1,6 @@
 ##Imports
 import numpy as np 
-import os, sys, argparse, datetime, shutil
+import os, sys, argparse, datetime, shutil, json
 from PIL import Image 
 import cv2
 import torchvision.models as models
@@ -30,7 +30,7 @@ from tools.pickle_tools import *
 parser = argparse.ArgumentParser(description='Arguments needed to prepare the metadata files')
 parser.add_argument('--path_resume', dest='path_resume', help='Path to the model to load', default='./model/model_fasterRCNN_noshap.pth')
 parser.add_argument('--data', dest='data', help='MonumenAI or PascalPart', default='MonumenAI')
-parser.add_argument('--path_image', dest='path_image', help='Either folder or image', default='/home/jules/Documents/Stage 4A/Data/Natalia_museum')
+parser.add_argument('--path_image', dest='path_image', help='Either folder or image', default='/home/jules/Documents/Stage 4A/Data/')
 parser.add_argument('--path_save', dest='path_save', help='Where to save results', default='./result')
 args = parser.parse_args()
 
@@ -118,6 +118,7 @@ if args.path_image.endswith('.jpg'):
 
 else:
     #If it's a folder, explore the whole folder and apply the same as before
+    results_dic = {}
     for path in os.listdir(args.path_image):
         if path.endswith('.jpg'):
             img_path = os.path.join(args.path_image,path)
@@ -144,5 +145,8 @@ else:
                 cv2.rectangle(image,(int(xmin),int(ymin)),(int(xmax),int(ymax)),(0,0,255),4)
                 cv2.putText(image,archi_features[labels[i]-1],(int(xmin),int(ymin)-4),cv2.FONT_HERSHEY_SIMPLEX,0.7,(0,0,255),2)
                 cv2.putText(image,str(scores[i])[:5],(int(xmin),int(ymax)-4),cv2.FONT_HERSHEY_SIMPLEX,0.7,(0,0,255),2)
-            result = Image.fromarray((image).astype(np.uint8))
-            result.save(args.path_save + '/' + img_path.split('/')[-1])
+            #result = Image.fromarray((image).astype(np.uint8))
+            #result.save(args.path_save + '/' + img_path.split('/')[-1])
+            results_dic[path] = {'scores':scores, 'labels':labels}
+            with open(args.path_save + '/' + os.path.basename(os.path.normpath(args.path_image)) + 'dic_res.json', 'w') as json_file:
+                json.dump(results_dic, json_file)

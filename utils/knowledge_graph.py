@@ -12,7 +12,7 @@ from monumai.pascal import Monument as MonPascal
 styles = FOLDERS_DATA
 archi_features = [el for sublist in list(MonMonumenAI.ELEMENT_DIC.values()) for el in sublist]
 knowledge_graph_monumenai = np.ones( (len(archi_features),len(styles)) ) * -1
-for i in range(len(MonMonumenAI.ELEMENT_DIC)):
+for i in range(len(archi_features)):
     local_el = archi_features[i]
     for k in range(len(list(MonMonumenAI.TRUE_ELEMENT_DIC.keys()))):
         style = list(MonMonumenAI.TRUE_ELEMENT_DIC.keys())[k]
@@ -22,7 +22,7 @@ for i in range(len(MonMonumenAI.ELEMENT_DIC)):
 styles = list(PASCAL_EL_DIC.keys())
 archi_features = [el for sublist in list(MonPascal.ELEMENT_DIC.values()) for el in sublist]
 knowledge_graph_pascal = np.ones( (len(archi_features),len(styles)) ) * -1
-for i in range(len(MonPascal.ELEMENT_DIC)):
+for i in range(len(archi_features)):
     local_el = archi_features[i]
     for k in range(len(list(MonPascal.TRUE_ELEMENT_DIC.keys()))):
         style = list(MonPascal.TRUE_ELEMENT_DIC.keys())[k]
