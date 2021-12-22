@@ -10,20 +10,20 @@ from monumai.pascal import Monument as MonPascal
 
 #MonumenAI - Build the knowledge graph matrix
 styles = FOLDERS_DATA
-archi_features = [el for sublist in list(MonMonumenAI.ELEMENT_DIC.values()) for el in sublist]
-knowledge_graph_monumenai = np.ones( (len(archi_features),len(styles)) ) * -1
-for i in range(len(archi_features)):
-    local_el = archi_features[i]
+archi_features_monumenai = [el for sublist in list(MonMonumenAI.ELEMENT_DIC.values()) for el in sublist]
+knowledge_graph_monumenai = np.ones( (len(archi_features_monumenai),len(styles)) ) * -1
+for i in range(len(archi_features_monumenai)):
+    local_el = archi_features_monumenai[i]
     for k in range(len(list(MonMonumenAI.TRUE_ELEMENT_DIC.keys()))):
         style = list(MonMonumenAI.TRUE_ELEMENT_DIC.keys())[k]
         if local_el in MonMonumenAI.TRUE_ELEMENT_DIC[style]:
             knowledge_graph_monumenai[i,k] = 1
 #PascalPart - Build the knowledge graph matrix
 styles = list(PASCAL_EL_DIC.keys())
-archi_features = [el for sublist in list(MonPascal.ELEMENT_DIC.values()) for el in sublist]
-knowledge_graph_pascal = np.ones( (len(archi_features),len(styles)) ) * -1
-for i in range(len(archi_features)):
-    local_el = archi_features[i]
+archi_features_pascal = [el for sublist in list(MonPascal.ELEMENT_DIC.values()) for el in sublist]
+knowledge_graph_pascal = np.ones( (len(archi_features_pascal),len(styles)) ) * -1
+for i in range(len(archi_features_pascal)):
+    local_el = archi_features_pascal[i]
     for k in range(len(list(MonPascal.TRUE_ELEMENT_DIC.keys()))):
         style = list(MonPascal.TRUE_ELEMENT_DIC.keys())[k]
         if local_el in MonPascal.TRUE_ELEMENT_DIC[style]:
@@ -33,8 +33,10 @@ for i in range(len(archi_features)):
 def compare_shap_and_KG(shap_values, true_labels, threshold = 0,dataset='MonumenAI'):
     if dataset == 'MonumenAI':
         knowledge_graph = knowledge_graph_monumenai
+        archi_features = archi_features_monumenai
     if dataset == 'PascalPart':
         knowledge_graph = knowledge_graph_pascal
+        archi_features = archi_features_pascal
     contrib = np.zeros((len(true_labels),len(archi_features)))
     for k in range(len(true_labels)):
         local_kg = knowledge_graph[:,true_labels[k]]
@@ -164,7 +166,7 @@ def GED_metric(features,shap_values,threshold=0.001,dataset='MonumenAI'):
     for i in range(len(shap_array)):
         FG = nx.Graph()
         for k in range(shap_array.shape[-1]):
-            facade = np.copy(shap_array[i,:,k])*features[k]
+            facade = np.copy(shap_array[i,:,k])*features[i]
             facade[facade<threshold] = 0
             facade[facade>=threshold] = 1
             facade = facade.astype(np.uint8)
@@ -177,8 +179,9 @@ def GED_metric(features,shap_values,threshold=0.001,dataset='MonumenAI'):
                         FG.add_node(index, name=names[j])
                         FG.add_edge(style_index, index)
             facade = np.copy(shap_array[i,:,k])*(features[k] == False)
-            facade[facade<threshold] = 1
-            facade[facade>=threshold] = 0
+            inter_facade = np.copy(facade)
+            facade[inter_facade>=threshold] = 0
+            facade[inter_facade<threshold] = 1
             facade = facade.astype(np.uint8)
             style_index = reversed_index_dic[styles[k]]
             if np.sum(facade) > 0:
