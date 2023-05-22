@@ -22,3 +22,7 @@ If the folder organisation if different, change the various import path + the co
 
 First run 'python build-csv.py'
 Then 'train.py' default parameter should work
+
+# Models
+
+Models can be found at : https://cloud.minesparis.psl.eu/index.php/s/TBKECKgGZoMp1aQ
